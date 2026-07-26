@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shop Floor Extract</title>
+<style>
+  :root{
+    --concrete:#34383d;
+    --concrete-dark:#222528;
+    --paper:#ece7dd;
+    --blueprint:#2f6f8f;
+    --hazard:#e8622c;
+    --ok:#4a7c59;
+    --line:#4a4f56;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--concrete-dark);
+    background-image:
+      linear-gradient(var(--line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--line) 1px, transparent 1px);
+    background-size:32px 32px;
+    background-position:-1px -1px;
+    font-family: 'Courier New', ui-monospace, monospace;
+    color:var(--paper);
+    min-height:100vh;
+    padding:40px 20px;
+  }
+  .wrap{max-width:760px;margin:0 auto;}
+  .tag{
+    display:inline-block;
+    background:var(--hazard);
+    color:#1a1a1a;
+    font-weight:800;
+    font-size:11px;
+    letter-spacing:1.5px;
+    padding:3px 8px;
+    transform:skewX(-8deg);
+    margin-bottom:14px;
+  }
+  h1{
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size:30px;
+    margin:0 0 6px 0;
+    letter-spacing:0.5px;
+  }
+  .sub{color:#a9adb2;font-size:13px;margin-bottom:30px;line-height:1.5;max-width:520px;}
+
+  .card{
+    background:var(--concrete);
+    border:1px solid var(--line);
+    padding:26px;
+    position:relative;
+  }
+  .card::before{
+    content:"";
+    position:absolute; top:0; left:0; right:0; height:6px;
+    background:repeating-linear-gradient(135deg, var(--hazard) 0 10px, #1a1a1a 10px 20px);
+    opacity:0.9;
+  }
+
+  .drop{
+    border:2px dashed var(--line);
+    padding:36px 20px;
+    text-align:center;
+    cursor:pointer;
+    transition:border-color .15s, background .15s;
+    margin-top:20px;
+  }
+  .drop:hover, .drop.drag{
+    border-color:var(--blueprint);
+    background:rgba(47,111,143,0.08);
+  }
+  .drop-icon{font-size:26px;margin-bottom:8px;}
+  .drop p{margin:4px 0;font-size:13px;color:#c7cbcf;}
+  .drop .hint{color:#797f85;font-size:11px;}
+  input[type=file]{display:none;}
+
+  .preview{
+    margin-top:16px;
+    display:flex;
+    align-items:center;
+    gap:12px;
+    background:var(--concrete-dark);
+    border:1px solid var(--line);
+    padding:10px 14px;
+    font-size:12px;
+    display:none;
+  }
+  .preview img{height:40px;width:40px;object-fit:cover;border:1px solid var(--line);}
+  .preview .name{color:var(--paper);}
+  .preview .clear{margin-left:auto;color:var(--hazard);cursor:pointer;background:none;border:none;font-family:inherit;font-size:12px;}
+
+  button.go{
+    width:100%;
+    margin-top:18px;
+    background:var(--blueprint);
+    color:#fff;
+    border:none;
+    padding:14px;
+    font-family:inherit;
+    font-weight:700;
+    font-size:13px;
+    letter-spacing:1px;
+    cursor:pointer;
+    transition:background .15s;
+  }
+  button.go:hover:not(:disabled){background:#3a85a8;}
+  button.go:disabled{background:#4a4f56;cursor:not-allowed;color:#8b9096;}
+
+  .status{margin-top:14px;font-size:12px;color:#a9adb2;min-height:16px;}
+  .status.err{color:var(--hazard);}
+
+  .result{margin-top:26px;display:none;}
+  .result-head{
+    display:flex;justify-content:space-between;align-items:baseline;
+    border-bottom:1px solid var(--line);
+    padding-bottom:8px;margin-bottom:14px;
+  }
+  .result-head h2{font-size:13px;letter-spacing:1.5px;color:#a9adb2;margin:0;font-weight:700;}
+  .result-head .conf{font-size:11px;color:var(--ok);}
+
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  td{padding:9px 6px;border-bottom:1px solid var(--line);vertical-align:top;}
+  td.field{color:#8b9096;width:38%;text-transform:uppercase;font-size:11px;letter-spacing:0.5px;}
+  td.val{color:var(--paper);}
+
+  .raw{
+    margin-top:16px;
+    background:var(--concrete-dark);
+    border:1px solid var(--line);
+    padding:12px;
+    font-size:11px;
+    color:#797f85;
+    display:none;
+    white-space:pre-wrap;
+    word-break:break-word;
+  }
+  .togglelink{font-size:11px;color:var(--blueprint);cursor:pointer;margin-top:12px;display:inline-block;}
+  .footer{margin-top:24px;font-size:11px;color:#5a5f65;text-align:center;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <span class="tag">PROTOTYPE — V0</span>
+  <h1>Shop Floor Extract</h1>
+  <p class="sub">Upload a photo or scan of a work order, inspection sheet, or handwritten form. It reads the mess and hands back clean fields — no retyping.</p>
+
+  <div class="card">
+    <div class="drop" id="drop">
+      <div class="drop-icon">▦</div>
+      <p>Drop a photo or scan here, or click to choose a file</p>
+      <p class="hint">JPG, PNG, or PDF — handwriting and rough scans are fine</p>
+    </div>
+    <input type="file" id="fileInput" accept="image/*,application/pdf">
+
+    <div class="preview" id="preview">
+      <img id="previewImg" src="" alt="">
+      <span class="name" id="previewName"></span>
+      <button class="clear" id="clearBtn">remove ✕</button>
+    </div>
+
+    <button class="go" id="goBtn" disabled>Extract data</button>
+    <div class="status" id="status"></div>
+
+    <div class="result" id="result">
+      <div class="result-head">
+        <h2>EXTRACTED FIELDS</h2>
+        <span class="conf" id="confNote"></span>
+      </div>
+      <table id="table"></table>
+      <span class="togglelink" id="rawToggle">show raw JSON</span>
+      <pre class="raw" id="rawBox"></pre>
+    </div>
+  </div>
+  <div class="footer">Prototype — accuracy not guaranteed, always verify flagged fields manually.</div>
+</div>
+
+<script>
+let fileData = null;
+
+const drop = document.getElementById('drop');
+const fileInput = document.getElementById('fileInput');
+const preview = document.getElementById('preview');
+const previewImg = document.getElementById('previewImg');
+const previewName = document.getElementById('previewName');
+const clearBtn = document.getElementById('clearBtn');
+const goBtn = document.getElementById('goBtn');
+const statusEl = document.getElementById('status');
+const resultEl = document.getElementById('result');
+const tableEl = document.getElementById('table');
+const rawBox = document.getElementById('rawBox');
+const rawToggle = document.getElementById('rawToggle');
+const confNote = document.getElementById('confNote');
+
+drop.addEventListener('click', () => fileInput.click());
+drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('drag'); });
+drop.addEventListener('dragleave', () => drop.classList.remove('drag'));
+drop.addEventListener('drop', e => {
+  e.preventDefault();
+  drop.classList.remove('drag');
+  if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener('change', e => {
+  if (e.target.files[0]) handleFile(e.target.files[0]);
+});
+clearBtn.addEventListener('click', () => {
+  fileData = null;
+  preview.style.display = 'none';
+  goBtn.disabled = true;
+  fileInput.value = '';
+  statusEl.textContent = '';
+  resultEl.style.display = 'none';
+});
+rawToggle.addEventListener('click', () => {
+  const showing = rawBox.style.display === 'block';
+  rawBox.style.display = showing ? 'none' : 'block';
+  rawToggle.textContent = showing ? 'show raw JSON' : 'hide raw JSON';
+});
+
+function handleFile(file){
+  const isPdf = file.type === 'application/pdf';
+  const maxBytes = 15 * 1024 * 1024;
+  if (file.size > maxBytes){
+    statusEl.textContent = 'That file is too large (over 15MB) — try a smaller photo or a lower-resolution scan.';
+    statusEl.className = 'status err';
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = () => {
+    const base64 = reader.result.split(',')[1];
+    fileData = { base64, mediaType: file.type, isPdf, name: file.name };
+    previewName.textContent = file.name;
+    if (isPdf){
+      previewImg.style.display = 'none';
+    } else {
+      previewImg.style.display = 'block';
+      previewImg.src = reader.result;
+    }
+    preview.style.display = 'flex';
+    goBtn.disabled = false;
+    statusEl.textContent = '';
+    statusEl.className = 'status';
+    resultEl.style.display = 'none';
+  };
+  reader.onerror = () => {
+    statusEl.textContent = 'Could not read that file — try a different one.';
+    statusEl.className = 'status err';
+  };
+  reader.readAsDataURL(file);
+}
+
+goBtn.addEventListener('click', async () => {
+  if (!fileData) return;
+  goBtn.disabled = true;
+  goBtn.textContent = 'Reading document...';
+  statusEl.textContent = 'Sending to the model — a rough scan can take a few seconds longer.';
+  statusEl.className = 'status';
+  resultEl.style.display = 'none';
+
+  try{
+    const response = await fetch('/api/extract', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        base64: fileData.base64,
+        mediaType: fileData.mediaType,
+        isPdf: fileData.isPdf
+      })
+    });
+
+    const parsed = await response.json();
+    if (!response.ok){
+      throw new Error(parsed.error || 'Request failed');
+    }
+
+    renderResult(parsed, JSON.stringify(parsed, null, 2));
+    statusEl.textContent = '';
+  } catch(err){
+    console.error(err);
+    statusEl.textContent = 'Extraction failed: ' + err.message + '. Try again, or try a clearer photo.';
+    statusEl.className = 'status err';
+  } finally {
+    goBtn.disabled = false;
+    goBtn.textContent = 'Extract data';
+  }
+});
+
+function renderResult(parsed, rawText){
+  tableEl.innerHTML = '';
+  const fields = parsed.fields || [];
+  if (fields.length === 0){
+    tableEl.innerHTML = '<tr><td class="val">No fields detected — try a clearer image.</td></tr>';
+  }
+  fields.forEach(f => {
+    const tr = document.createElement('tr');
+    const tdLabel = document.createElement('td');
+    tdLabel.className = 'field';
+    tdLabel.textContent = f.label || '(unlabeled)';
+    const tdVal = document.createElement('td');
+    tdVal.className = 'val';
+    tdVal.textContent = f.value || '—';
+    if (f.uncertain){
+      tdVal.style.color = 'var(--hazard)';
+      const flag = document.createElement('span');
+      flag.textContent = '  ⚠ unconfirmed — verify manually';
+      flag.style.fontSize = '10px';
+      flag.style.color = 'var(--hazard)';
+      flag.style.display = 'block';
+      flag.style.marginTop = '2px';
+      tdVal.appendChild(flag);
+    }
+    tr.appendChild(tdLabel);
+    tr.appendChild(tdVal);
+    tableEl.appendChild(tr);
+  });
+  confNote.textContent = (parsed.detected_language ? '🌐 ' + parsed.detected_language + '  —  ' : '') + (parsed.confidence_note ? '⚠ ' + parsed.confidence_note : '✓ clean read');
+  rawBox.textContent = rawText;
+  resultEl.style.display = 'block';
+}
+</script>
+</body>
+</html>

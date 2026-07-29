@@ -1,25 +1,36 @@
-# Shop Floor Extract
+# Shopfloor extractor — Vercel-ready
 
-## What this is
-- `index.html` — the page people see and use (upload a document, click Extract)
-- `api/extract.js` — a hidden backend function. This is the only place that talks to the AI model, and the only place your API key lives.
+Real extraction: uploaded photos are sent to `/api/extract`, which calls the
+Anthropic API with your key and reads the document live. Nothing here is
+mock/demo data.
 
-## How to deploy (Vercel)
+## Deploy
 
-1. Push this whole folder to a GitHub repository (see steps below).
-2. Go to vercel.com, sign in with GitHub, click "Add New Project," and select this repo.
-3. Before clicking Deploy, open "Environment Variables" and add:
-   - Key: `ANTHROPIC_API_KEY`
-   - Value: (paste your key from console.anthropic.com — starts with `sk-ant-`)
-4. Click Deploy. Vercel gives you a live URL like `your-project.vercel.app`.
-5. That's it — the key stays on Vercel's servers and is never sent to anyone's browser.
+1. Push this whole folder to your GitHub repo (replace the old files).
+2. In Vercel: Project → Settings → Environment Variables → add
+   `ANTHROPIC_API_KEY` = your key from console.anthropic.com.
+3. Redeploy (adding the env var alone does not update an existing
+   deployment — trigger a new deploy after adding it).
 
-## Uploading this folder to GitHub (no terminal needed)
+## Test it
 
-1. Go to your new empty GitHub repository page.
-2. Click "uploading an existing file" (a link shown on the empty repo page).
-3. Drag in `index.html`, `README.md`, and the `api` folder (or its contents — GitHub's uploader supports drag-and-drop of folders in most browsers).
-4. Scroll down, click "Commit changes."
+1. Open your deployed URL.
+2. Click "OPEN THE TOOL".
+3. Pick a document type, choose a real photo (handwriting is fine — that's
+   the point), click "EXTRACT DATA".
+4. You should see fields read from *your specific photo*, with anything
+   ambiguous marked "VERIFY" and a short note on why.
 
-## Testing after deploy
-Open the live Vercel URL in an incognito window (to confirm it works without being logged into anything) and try uploading a test document.
+If it errors with "Server is not configured with an API key yet", the env
+var isn't set or you haven't redeployed since adding it.
+
+## Notes / limitations
+
+- History and Analytics are stored in the browser's `localStorage` only —
+  there's no account system or server-side database yet, so history won't
+  follow you to another device or browser.
+- Images are resized/compressed client-side (max 1600px, JPEG ~80%) before
+  upload to stay under serverless payload limits. Very large or unusual
+  files may still fail — if so, try a smaller photo.
+- Pricing tiers on the marketing page are placeholders, not wired to any
+  billing system.
